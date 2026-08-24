@@ -11,6 +11,11 @@
       supportedSystems = [ "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       overlay = final: _previous: {
+        casparcg-cef-142 = final.callPackage ./nix/casparcg/cef.nix { };
+        casparcg-server = final.callPackage ./nix/casparcg {
+          cef = final.casparcg-cef-142;
+          withHtml = true;
+        };
         casparcg-server-minimal = final.callPackage ./nix/casparcg {
           withHtml = false;
         };
@@ -44,6 +49,14 @@
           pkgs = pkgsFor system;
         in
         {
+          full-build = pkgs.casparcg-server;
+
+          headless-html = import ./checks/headless-html.nix {
+            inherit pkgs;
+            module = ./nix/modules/casparcg.nix;
+            package = pkgs.casparcg-server;
+          };
+
           headless-amcp = import ./checks/headless-amcp.nix {
             inherit pkgs;
             module = ./nix/modules/casparcg.nix;
@@ -61,10 +74,12 @@
             ${pkgs.nixfmt}/bin/nixfmt --check \
               ${./flake.nix} \
               ${./nix/casparcg/default.nix} \
+              ${./nix/casparcg/cef.nix} \
               ${./nix/modules/casparcg.nix} \
               ${./examples/host.nix} \
               ${./checks/module-eval.nix} \
-              ${./checks/headless-amcp.nix}
+              ${./checks/headless-amcp.nix} \
+              ${./checks/headless-html.nix}
             touch "$out"
           '';
         }
@@ -103,8 +118,8 @@
           pkgs = pkgsFor system;
         in
         {
-          inherit (pkgs) casparcg-server-minimal;
-          default = pkgs.casparcg-server-minimal;
+          inherit (pkgs) casparcg-server casparcg-server-minimal;
+          default = pkgs.casparcg-server;
         }
       );
 

@@ -38,6 +38,7 @@ let
   ) null missingConfig.assertions;
 in
 assert defaultConfig.hardware.graphics.enable;
+assert defaultConfig.services.casparcg.package.pname == "casparcg-server";
 assert
   defaultConfig.environment.etc."casparcg/casparcg.config".source == ../examples/casparcg.config;
 assert defaultConfig.networking.firewall.allowedTCPPorts == [ ];

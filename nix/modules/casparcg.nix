@@ -22,8 +22,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.casparcg-server-minimal;
-      defaultText = lib.literalExpression "pkgs.casparcg-server-minimal";
+      default = pkgs.casparcg-server;
+      defaultText = lib.literalExpression "pkgs.casparcg-server";
       description = "CasparCG Server package to run.";
     };
 
@@ -77,7 +77,7 @@ in
     cacheDir = lib.mkOption {
       type = lib.types.str;
       default = "/var/cache/casparcg";
-      description = "Runtime cache directory, including the future CEF cache.";
+      description = "Runtime cache directory, including the CEF cache.";
     };
 
     amcpPort = lib.mkOption {

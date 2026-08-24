@@ -4,6 +4,7 @@
   fetchFromGitHub,
   cmake,
   ninja,
+  patchelf,
   pkg-config,
   boost188,
   ffmpeg_7,
@@ -19,8 +20,13 @@
   simde,
   tbb,
   zlib,
+  cef ? null,
   withHtml ? false,
 }:
+
+assert lib.assertMsg (
+  !withHtml || cef != null
+) "CEF is required when HTML Producer support is enabled";
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "casparcg-server${lib.optionalString (!withHtml) "-minimal"}";
@@ -35,13 +41,19 @@ stdenv.mkDerivation (finalAttrs: {
 
   sourceRoot = "${finalAttrs.src.name}/src";
 
-  patches = [ ./patches/gcc-15-cstdint.patch ];
+  patches = [
+    ./patches/gcc-15-cstdint.patch
+  ]
+  ++ lib.optionals withHtml [
+    ./patches/cef-runtime-paths.patch
+  ];
 
   nativeBuildInputs = [
     cmake
     ninja
     pkg-config
-  ];
+  ]
+  ++ lib.optionals withHtml [ patchelf ];
 
   buildInputs = [
     boost188
@@ -57,7 +69,8 @@ stdenv.mkDerivation (finalAttrs: {
     simde
     tbb
     zlib
-  ];
+  ]
+  ++ lib.optionals withHtml [ cef ];
 
   cmakeFlags = [
     (lib.cmakeBool "ENABLE_AVX2" true)
@@ -65,9 +78,19 @@ stdenv.mkDerivation (finalAttrs: {
     (lib.cmakeFeature "CASPARCG_BINARY_NAME" "casparcg-server")
     (lib.cmakeFeature "CMAKE_BUILD_TYPE" "Release")
     (lib.cmakeFeature "DIAG_FONT_PATH" "${liberation_ttf}/share/fonts/truetype/LiberationMono-Regular.ttf")
+  ]
+  ++ lib.optionals withHtml [
+    (lib.cmakeBool "USE_SYSTEM_CEF" true)
+    (lib.cmakeFeature "CASPARCG_CEF_INCLUDE_PATH" "${cef}/include/casparcg-cef-142")
+    (lib.cmakeFeature "CASPARCG_CEF_LIBRARY_PATH" "${cef}/lib/casparcg-cef-142")
+    (lib.cmakeFeature "CASPARCG_CEF_RESOURCE_PATH" "${cef}/lib/casparcg-cef-142")
   ];
 
   env.GIT_HASH = "69e8ad5";
+
+  postFixup = lib.optionalString withHtml ''
+    patchelf --add-rpath "${cef}/lib/casparcg-cef-142" "$out/bin/casparcg-server"
+  '';
 
   strictDeps = true;
 
