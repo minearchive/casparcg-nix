@@ -8,6 +8,7 @@
 let
   cfg = config.services.casparcg;
   configPath = "/etc/casparcg/casparcg.config";
+  decklinkReady = cfg.decklink.enable && config.hardware.decklink.enable;
   managedDirectories = [
     cfg.mediaDir
     cfg.templateDir
@@ -134,6 +135,8 @@ in
       description = "systemd restart policy for CasparCG.";
     };
 
+    decklink.enable = lib.mkEnableOption "Blackmagic DeckLink runtime integration";
+
     mediaScanner = {
       enable = lib.mkEnableOption "the CasparCG Media Scanner";
 
@@ -178,6 +181,13 @@ in
         assertion = builtins.all (directory: lib.hasPrefix "/" directory) managedDirectories;
         message = "All services.casparcg directory options must be absolute paths.";
       }
+      {
+        assertion = !cfg.decklink.enable || config.hardware.decklink.enable;
+        message = ''
+          services.casparcg.decklink.enable requires hardware.decklink.enable.
+          The host must also allow the unfree blackmagic-desktop-video and decklink packages.
+        '';
+      }
     ];
 
     hardware.graphics.enable = lib.mkDefault true;
@@ -211,14 +221,23 @@ in
       description = "CasparCG Server";
       documentation = [ "https://github.com/CasparCG/server" ];
       wantedBy = [ "multi-user.target" ];
-      wants = [ "network-online.target" ];
-      after = [ "network-online.target" ];
+      wants = [
+        "network-online.target"
+      ]
+      ++ lib.optional cfg.decklink.enable "DesktopVideoHelper.service";
+      after = [
+        "network-online.target"
+      ]
+      ++ lib.optional cfg.decklink.enable "DesktopVideoHelper.service";
 
       environment = {
         XDG_CACHE_HOME = cfg.cacheDir;
       }
       // lib.optionalAttrs cfg.headless {
         EGL_PLATFORM = "surfaceless";
+      }
+      // lib.optionalAttrs decklinkReady {
+        LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.blackmagic-desktop-video ];
       }
       // cfg.extraEnvironment;
 

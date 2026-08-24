@@ -87,6 +87,8 @@
               ${./nix/casparcg/cef.nix} \
               ${./nix/media-scanner/default.nix} \
               ${./nix/modules/casparcg.nix} \
+              ${./examples/casperctl.nix} \
+              ${./examples/decklink.nix} \
               ${./examples/host.nix} \
               ${./checks/module-eval.nix} \
               ${./checks/headless-amcp.nix} \

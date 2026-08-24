@@ -130,6 +130,41 @@ services.casparcg = {
 
 scanner は同じ XML 設定と `mediaDir` / `templateDir` を参照し、既定では `127.0.0.1:8000` のみに bind します。firewall は自動で開きません。scanner の database は `/var/lib/casparcg-media-scanner` に保存され、scanner が停止しても CasparCG 本体は停止しません。
 
+## DeckLink
+
+DeckLink は opt-in です。NixOS 標準の `hardware.decklink` module が kernel module と `DesktopVideoHelper.service` を提供し、この flake は CasparCG の起動順序と `libDeckLinkAPI.so` の runtime search path だけを追加します。
+
+```nix
+{
+  services.casparcg = {
+    enable = true;
+    configFile = ./casparcg.config;
+    decklink.enable = true;
+  };
+
+  hardware.decklink.enable = true;
+}
+```
+
+Blackmagic Desktop Video は unfree です。この module が `allowUnfree` を暗黙に変更することはありません。ホスト側で `blackmagic-desktop-video` と `decklink` のみを許可してください。完全な例は [`examples/decklink.nix`](examples/decklink.nix) にあります。`services.casparcg.decklink.enable = true` に対して `hardware.decklink.enable` が無い構成は assertion error になります。
+
+実機更新時は、少なくとも次を確認します。
+
+- CPU の AVX2 対応と、lock された kernel / Desktop Video の組み合わせ
+- `blackmagic` / `blackmagic-io` kernel module と `DesktopVideoHelper.service` の起動
+- `/dev/blackmagic/*` を `casparcg` user から読み書きできること
+- CasparCG log での card 列挙、video mode、reference、keyer の認識
+- SDI video/audio 出力、frame rate、reference lock、必要な fill/key 出力
+- CasparCG と helper の restart、連続運転、前世代への NixOS rollback
+
+DeckLink hardware を使う放送品質試験は自動 VM check の対象外です。driver または card の初期化に失敗した場合も、両方の DeckLink option を無効にすれば unfree package を要求せず core service を利用できます。
+
+## casperctl integration
+
+同一ホストでは両 flake を同じ `nixpkgs` input に追従させ、`casperctl` から `127.0.0.1:5250` へ接続します。構成例は [`examples/casperctl.nix`](examples/casperctl.nix) にあります。CasparCG の AMCP listener は loopback 限定とは仮定せず、`services.casparcg.openFirewall = false` のままにしてください。
+
+別ホストに置く場合は AMCP を全 interface へ一括公開せず、WireGuard 等の VPN interface または送信元を限定した firewall rule をホスト構成で追加します。CasparCG の一時停止を `casperctl` の fatal condition や systemd の停止連鎖にせず、controller 側の readiness と再接続で扱います。
+
 ## Roadmap
 
 1. flake skeleton（完了）
@@ -138,4 +173,4 @@ scanner は同じ XML 設定と `mediaDir` / `templateDir` を参照し、既定
 4. module/AMCP checks（完了）
 5. CEF 142 対応 package（完了）
 6. Media Scanner（完了）
-7. DeckLink と `casperctl` の統合文書
+7. DeckLink と `casperctl` の統合文書（完了）

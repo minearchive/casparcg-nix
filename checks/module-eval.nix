@@ -5,8 +5,8 @@
 }:
 
 let
-  evaluate =
-    settings:
+  evaluateWith =
+    settings: extraModules:
     nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
@@ -15,8 +15,10 @@ let
           services.casparcg = settings;
           system.stateVersion = "26.05";
         }
-      ];
+      ]
+      ++ extraModules;
     };
+  evaluate = settings: evaluateWith settings [ ];
 
   defaultConfig =
     (evaluate {
@@ -45,10 +47,26 @@ let
       };
     }).config;
 
+  decklinkConfig =
+    (evaluateWith {
+      enable = true;
+      configFile = ../examples/casparcg.config;
+    } [ ../examples/decklink.nix ]).config;
+
+  invalidDecklinkConfig =
+    (evaluate {
+      enable = true;
+      configFile = ../examples/casparcg.config;
+      decklink.enable = true;
+    }).config;
+
   missingConfig = (evaluate { enable = true; }).config;
   configFileAssertion = pkgs.lib.findFirst (
     assertion: pkgs.lib.hasInfix "services.casparcg.configFile" assertion.message
   ) null missingConfig.assertions;
+  decklinkAssertion = pkgs.lib.findFirst (
+    assertion: pkgs.lib.hasInfix "hardware.decklink.enable" assertion.message
+  ) null invalidDecklinkConfig.assertions;
 in
 assert defaultConfig.hardware.graphics.enable;
 assert defaultConfig.services.casparcg.package.pname == "casparcg-server";
@@ -62,6 +80,8 @@ assert defaultConfig.systemd.services.casparcg.environment.XDG_CACHE_HOME == "/v
 assert defaultConfig.systemd.services.casparcg.serviceConfig.UnsetEnvironment == [ "DISPLAY" ];
 assert defaultConfig.systemd.services.casparcg.serviceConfig.Restart == "on-failure";
 assert defaultConfig.systemd.services.casparcg.serviceConfig.KillSignal == "SIGTERM";
+assert !defaultConfig.services.casparcg.decklink.enable;
+assert !(defaultConfig.systemd.services.casparcg.environment ? LD_LIBRARY_PATH);
 assert !(builtins.hasAttr "casparcg-media-scanner" defaultConfig.systemd.services);
 assert defaultConfig.users.users.casparcg.isSystemUser;
 assert defaultConfig.users.users.casparcg.group == "casparcg";
@@ -91,8 +111,15 @@ assert pkgs.lib.hasInfix "--http.host 127.0.0.1 --http.port 8000"
   scannerConfig.systemd.services."casparcg-media-scanner".serviceConfig.ExecStart;
 assert pkgs.lib.hasInfix "--logger.level debug"
   scannerConfig.systemd.services."casparcg-media-scanner".serviceConfig.ExecStart;
+assert decklinkConfig.hardware.decklink.enable;
+assert builtins.elem "DesktopVideoHelper.service" decklinkConfig.systemd.services.casparcg.after;
+assert builtins.elem "DesktopVideoHelper.service" decklinkConfig.systemd.services.casparcg.wants;
+assert pkgs.lib.hasInfix "blackmagic-desktop-video"
+  decklinkConfig.systemd.services.casparcg.environment.LD_LIBRARY_PATH;
 assert configFileAssertion != null;
 assert !configFileAssertion.assertion;
+assert decklinkAssertion != null;
+assert !decklinkAssertion.assertion;
 pkgs.runCommand "casparcg-module-eval" { } ''
   touch "$out"
 ''
