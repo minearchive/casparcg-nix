@@ -32,6 +32,19 @@ let
       openFirewall = true;
     }).config;
 
+  scannerConfig =
+    (evaluate {
+      enable = true;
+      configFile = ../examples/casparcg.config;
+      mediaScanner = {
+        enable = true;
+        extraArgs = [
+          "--logger.level"
+          "debug"
+        ];
+      };
+    }).config;
+
   missingConfig = (evaluate { enable = true; }).config;
   configFileAssertion = pkgs.lib.findFirst (
     assertion: pkgs.lib.hasInfix "services.casparcg.configFile" assertion.message
@@ -49,12 +62,35 @@ assert defaultConfig.systemd.services.casparcg.environment.XDG_CACHE_HOME == "/v
 assert defaultConfig.systemd.services.casparcg.serviceConfig.UnsetEnvironment == [ "DISPLAY" ];
 assert defaultConfig.systemd.services.casparcg.serviceConfig.Restart == "on-failure";
 assert defaultConfig.systemd.services.casparcg.serviceConfig.KillSignal == "SIGTERM";
+assert !(builtins.hasAttr "casparcg-media-scanner" defaultConfig.systemd.services);
 assert defaultConfig.users.users.casparcg.isSystemUser;
 assert defaultConfig.users.users.casparcg.group == "casparcg";
 assert builtins.elem "video" defaultConfig.users.users.casparcg.extraGroups;
 assert builtins.elem "render" defaultConfig.users.users.casparcg.extraGroups;
 assert exposedConfig.networking.firewall.allowedTCPPorts == [ 5250 ];
 assert !(exposedConfig.systemd.services.casparcg.serviceConfig ? UnsetEnvironment);
+assert scannerConfig.services.casparcg.mediaScanner.package.pname == "casparcg-media-scanner";
+assert scannerConfig.networking.firewall.allowedTCPPorts == [ ];
+assert builtins.elem "casparcg.service"
+  scannerConfig.systemd.services."casparcg-media-scanner".after;
+assert builtins.elem "casparcg.service"
+  scannerConfig.systemd.services."casparcg-media-scanner".wants;
+assert
+  !(builtins.elem "casparcg.service"
+    scannerConfig.systemd.services."casparcg-media-scanner".requires
+  );
+assert
+  !(builtins.elem "casparcg.service" scannerConfig.systemd.services."casparcg-media-scanner".partOf);
+assert scannerConfig.systemd.services."casparcg-media-scanner".environment.NODE_ENV == "production";
+assert
+  scannerConfig.systemd.services."casparcg-media-scanner".serviceConfig.StateDirectory
+  == "casparcg-media-scanner";
+assert pkgs.lib.hasInfix "--caspar.config /etc/casparcg/casparcg.config"
+  scannerConfig.systemd.services."casparcg-media-scanner".serviceConfig.ExecStart;
+assert pkgs.lib.hasInfix "--http.host 127.0.0.1 --http.port 8000"
+  scannerConfig.systemd.services."casparcg-media-scanner".serviceConfig.ExecStart;
+assert pkgs.lib.hasInfix "--logger.level debug"
+  scannerConfig.systemd.services."casparcg-media-scanner".serviceConfig.ExecStart;
 assert configFileAssertion != null;
 assert !configFileAssertion.assertion;
 pkgs.runCommand "casparcg-module-eval" { } ''

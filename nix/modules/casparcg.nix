@@ -15,6 +15,19 @@ let
     cfg.logDir
     cfg.cacheDir
   ];
+  mediaScannerArgs = [
+    "--caspar.config"
+    configPath
+    "--http.host"
+    cfg.mediaScanner.listenAddress
+    "--http.port"
+    (toString cfg.mediaScanner.port)
+    "--paths.media"
+    cfg.mediaDir
+    "--paths.template"
+    cfg.templateDir
+  ]
+  ++ cfg.mediaScanner.extraArgs;
 in
 {
   options.services.casparcg = {
@@ -120,6 +133,39 @@ in
       default = "on-failure";
       description = "systemd restart policy for CasparCG.";
     };
+
+    mediaScanner = {
+      enable = lib.mkEnableOption "the CasparCG Media Scanner";
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.media-scanner;
+        defaultText = lib.literalExpression "pkgs.media-scanner";
+        description = "CasparCG Media Scanner package to run.";
+      };
+
+      listenAddress = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "Address on which the Media Scanner HTTP server listens.";
+      };
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8000;
+        description = "Local HTTP port used by the Media Scanner and CasparCG.";
+      };
+
+      extraArgs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        example = [
+          "--logger.level"
+          "debug"
+        ];
+        description = "Additional command-line arguments passed to the Media Scanner.";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -203,6 +249,33 @@ in
       }
       // lib.optionalAttrs cfg.headless {
         UnsetEnvironment = [ "DISPLAY" ];
+      };
+    };
+
+    systemd.services."casparcg-media-scanner" = lib.mkIf cfg.mediaScanner.enable {
+      description = "CasparCG Media Scanner";
+      documentation = [ "https://github.com/CasparCG/media-scanner" ];
+      wantedBy = [ "multi-user.target" ];
+      wants = [ "casparcg.service" ];
+      after = [ "casparcg.service" ];
+
+      environment.NODE_ENV = "production";
+
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${lib.getExe cfg.mediaScanner.package} ${lib.escapeShellArgs mediaScannerArgs}";
+        User = cfg.user;
+        Group = cfg.group;
+        WorkingDirectory = "/var/lib/casparcg-media-scanner";
+
+        StateDirectory = "casparcg-media-scanner";
+        StateDirectoryMode = "0750";
+
+        Restart = "on-failure";
+        RestartSec = "2s";
+        TimeoutStopSec = "30s";
+        KillSignal = "SIGTERM";
+        UMask = "0027";
       };
     };
   };

@@ -1,0 +1,12 @@
+diff --git a/tools/build.mjs b/tools/build.mjs
+--- a/tools/build.mjs
++++ b/tools/build.mjs
+@@ -26,5 +26,3 @@
+-// Copy leveldown
+-await fs.mkdir(`deploy/prebuilds`, { recursive: true })
+-await fs.cp(`./node_modules/leveldown/prebuilds/${platform}-${arch}`, `deploy/prebuilds/${platform}-${arch}`, {
+-	recursive: true,
+-})
++// Copy the native leveldown module built for the current Node.js runtime.
++await fs.mkdir(`deploy/build/Release`, { recursive: true })
++await fs.cp(`./node_modules/leveldown/build/Release/leveldown.node`, `deploy/build/Release/leveldown.node`)

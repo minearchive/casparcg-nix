@@ -19,6 +19,7 @@
         casparcg-server-minimal = final.callPackage ./nix/casparcg {
           withHtml = false;
         };
+        media-scanner = final.callPackage ./nix/media-scanner { };
       };
       pkgsFor =
         system:
@@ -65,6 +66,15 @@
 
           minimal-build = pkgs.casparcg-server-minimal;
 
+          media-scanner-build = pkgs.media-scanner;
+
+          media-scanner = import ./checks/media-scanner.nix {
+            inherit pkgs;
+            module = ./nix/modules/casparcg.nix;
+            package = pkgs.casparcg-server-minimal;
+            scannerPackage = pkgs.media-scanner;
+          };
+
           module-eval = import ./checks/module-eval.nix {
             inherit nixpkgs pkgs;
             module = casparcgModule;
@@ -75,11 +85,13 @@
               ${./flake.nix} \
               ${./nix/casparcg/default.nix} \
               ${./nix/casparcg/cef.nix} \
+              ${./nix/media-scanner/default.nix} \
               ${./nix/modules/casparcg.nix} \
               ${./examples/host.nix} \
               ${./checks/module-eval.nix} \
               ${./checks/headless-amcp.nix} \
-              ${./checks/headless-html.nix}
+              ${./checks/headless-html.nix} \
+              ${./checks/media-scanner.nix}
             touch "$out"
           '';
         }
@@ -118,7 +130,7 @@
           pkgs = pkgsFor system;
         in
         {
-          inherit (pkgs) casparcg-server casparcg-server-minimal;
+          inherit (pkgs) casparcg-server casparcg-server-minimal media-scanner;
           default = pkgs.casparcg-server;
         }
       );

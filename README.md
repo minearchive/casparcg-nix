@@ -30,7 +30,7 @@ nix flake check
 ```
 
 開発 shell には Nix formatter、静的解析ツール、および CMake/Ninja build に必要な基本ツールが含まれます。
-`nix flake check` は minimal/full package build、module evaluation、headless VM 上の AMCP/HTML smoke test を実行します。
+`nix flake check` は minimal/full package build、Media Scanner build、module evaluation、headless VM 上の AMCP/HTML/Media Scanner smoke test を実行します。
 
 ## Full package
 
@@ -105,6 +105,31 @@ HTML Producer が不要なホストでは package を明示的に軽量版へ切
 services.casparcg.package = pkgs.casparcg-server-minimal;
 ```
 
+## Media Scanner
+
+Media Scanner 1.4.0 は独立した package としてもビルドできます。Node.js 24、FFmpeg 7、および Node 24 向けにソースビルドした native `leveldown` module を runtime closure に含みます。
+
+```console
+nix build .#media-scanner
+```
+
+NixOS service は CasparCG service の下で opt-in できます。
+
+```nix
+services.casparcg = {
+  enable = true;
+  configFile = ./casparcg.config;
+
+  mediaScanner = {
+    enable = true;
+    listenAddress = "127.0.0.1";
+    port = 8000;
+  };
+};
+```
+
+scanner は同じ XML 設定と `mediaDir` / `templateDir` を参照し、既定では `127.0.0.1:8000` のみに bind します。firewall は自動で開きません。scanner の database は `/var/lib/casparcg-media-scanner` に保存され、scanner が停止しても CasparCG 本体は停止しません。
+
 ## Roadmap
 
 1. flake skeleton（完了）
@@ -112,5 +137,5 @@ services.casparcg.package = pkgs.casparcg-server-minimal;
 3. headless NixOS service（完了）
 4. module/AMCP checks（完了）
 5. CEF 142 対応 package（完了）
-6. Media Scanner
+6. Media Scanner（完了）
 7. DeckLink と `casperctl` の統合文書

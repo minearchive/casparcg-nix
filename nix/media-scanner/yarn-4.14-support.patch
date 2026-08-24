@@ -1,0 +1,14 @@
+diff --git a/.yarnrc.yml b/.yarnrc.yml
+--- a/.yarnrc.yml
++++ b/.yarnrc.yml
+@@ -1,0 +2,4 @@
++approvedGitRepositories:
++  - "**"
++enableScripts: true
++
+diff --git a/yarn.lock b/yarn.lock
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -5 +5 @@
+-  version: 8
++  version: 9
