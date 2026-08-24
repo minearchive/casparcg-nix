@@ -10,7 +10,17 @@
     let
       supportedSystems = [ "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-      pkgsFor = system: import nixpkgs { inherit system; };
+      overlay = final: _previous: {
+        casparcg-server-minimal = final.callPackage ./nix/casparcg {
+          withHtml = false;
+        };
+      };
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          overlays = [ overlay ];
+        };
       formatterFor =
         system:
         let
@@ -31,7 +41,9 @@
         in
         {
           formatting = pkgs.runCommand "casparcg-nix-formatting" { } ''
-            ${pkgs.nixfmt}/bin/nixfmt --check ${./flake.nix}
+            ${pkgs.nixfmt}/bin/nixfmt --check \
+              ${./flake.nix} \
+              ${./nix/casparcg/default.nix}
             touch "$out"
           '';
         }
@@ -54,6 +66,19 @@
               statix
             ];
           };
+        }
+      );
+
+      overlays.default = overlay;
+
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = pkgsFor system;
+        in
+        {
+          inherit (pkgs) casparcg-server-minimal;
+          default = pkgs.casparcg-server-minimal;
         }
       );
 

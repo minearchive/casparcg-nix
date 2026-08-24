@@ -1,0 +1,10 @@
+diff --git a/common/bit_depth.h b/common/bit_depth.h
+index 6f9f49f..c788f14 100644
+--- a/common/bit_depth.h
++++ b/common/bit_depth.h
+@@ -1,5 +1,6 @@
+ #pragma once
+-
++#include <cstdint>
++
+ #include <memory>
