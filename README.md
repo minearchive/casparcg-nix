@@ -47,11 +47,41 @@ nix build .#casparcg-server-minimal
 
 この package は AVX2 対応 CPU を前提とします。HTML Producer 対応 package は後続で追加します。
 
+## NixOS service
+
+flake の module を読み込み、CasparCG XML を指定します。
+
+```nix
+{
+  inputs.casparcg-nix = {
+    url = "github:OWNER/casparcg-nix";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  outputs = { nixpkgs, casparcg-nix, ... }: {
+    nixosConfigurations.playout = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        casparcg-nix.nixosModules.casparcg
+        {
+          services.casparcg = {
+            enable = true;
+            configFile = ./casparcg.config;
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+module は XML を生成しません。`configFile` 内の path/port と module options を一致させる責任は利用側にあります。AMCP firewall は既定では開きません。
+
 ## Roadmap
 
 1. flake skeleton（完了）
 2. CEF なしの CasparCG Server package（完了）
-3. headless NixOS service
+3. headless NixOS service（完了）
 4. module/AMCP checks
 5. CEF 142 対応 package
 6. Media Scanner

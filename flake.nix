@@ -21,6 +21,10 @@
           inherit system;
           overlays = [ overlay ];
         };
+      casparcgModule = { ... }: {
+        imports = [ ./nix/modules/casparcg.nix ];
+        nixpkgs.overlays = [ overlay ];
+      };
       formatterFor =
         system:
         let
@@ -43,7 +47,9 @@
           formatting = pkgs.runCommand "casparcg-nix-formatting" { } ''
             ${pkgs.nixfmt}/bin/nixfmt --check \
               ${./flake.nix} \
-              ${./nix/casparcg/default.nix}
+              ${./nix/casparcg/default.nix} \
+              ${./nix/modules/casparcg.nix} \
+              ${./examples/host.nix}
             touch "$out"
           '';
         }
@@ -68,6 +74,11 @@
           };
         }
       );
+
+      nixosModules = {
+        casparcg = casparcgModule;
+        default = casparcgModule;
+      };
 
       overlays.default = overlay;
 
