@@ -44,12 +44,27 @@
           pkgs = pkgsFor system;
         in
         {
+          headless-amcp = import ./checks/headless-amcp.nix {
+            inherit pkgs;
+            module = ./nix/modules/casparcg.nix;
+            package = pkgs.casparcg-server-minimal;
+          };
+
+          minimal-build = pkgs.casparcg-server-minimal;
+
+          module-eval = import ./checks/module-eval.nix {
+            inherit nixpkgs pkgs;
+            module = casparcgModule;
+          };
+
           formatting = pkgs.runCommand "casparcg-nix-formatting" { } ''
             ${pkgs.nixfmt}/bin/nixfmt --check \
               ${./flake.nix} \
               ${./nix/casparcg/default.nix} \
               ${./nix/modules/casparcg.nix} \
-              ${./examples/host.nix}
+              ${./examples/host.nix} \
+              ${./checks/module-eval.nix} \
+              ${./checks/headless-amcp.nix}
             touch "$out"
           '';
         }

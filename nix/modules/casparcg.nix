@@ -7,7 +7,7 @@
 
 let
   cfg = config.services.casparcg;
-  configPath = if cfg.configFile == null then "/dev/null" else toString cfg.configFile;
+  configPath = "/etc/casparcg/casparcg.config";
   managedDirectories = [
     cfg.mediaDir
     cfg.templateDir
@@ -136,6 +136,10 @@ in
 
     hardware.graphics.enable = lib.mkDefault true;
 
+    environment.etc = lib.mkIf (cfg.configFile != null) {
+      "casparcg/casparcg.config".source = cfg.configFile;
+    };
+
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.amcpPort ];
 
     users.groups = lib.mkIf (cfg.group == "casparcg") {
@@ -164,11 +168,13 @@ in
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
 
-      environment =
-        lib.optionalAttrs cfg.headless {
-          EGL_PLATFORM = "surfaceless";
-        }
-        // cfg.extraEnvironment;
+      environment = {
+        XDG_CACHE_HOME = cfg.cacheDir;
+      }
+      // lib.optionalAttrs cfg.headless {
+        EGL_PLATFORM = "surfaceless";
+      }
+      // cfg.extraEnvironment;
 
       serviceConfig = {
         Type = "simple";

@@ -30,6 +30,7 @@ nix flake check
 ```
 
 開発 shell には Nix formatter、静的解析ツール、および今後の CMake/Ninja build に必要な基本ツールが含まれます。
+`nix flake check` は package build、module evaluation、および headless VM 上の AMCP smoke test を実行します。
 
 ## Minimal package
 
@@ -82,7 +83,7 @@ module は XML を生成しません。`configFile` 内の path/port と module 
 1. flake skeleton（完了）
 2. CEF なしの CasparCG Server package（完了）
 3. headless NixOS service（完了）
-4. module/AMCP checks
+4. module/AMCP checks（完了）
 5. CEF 142 対応 package
 6. Media Scanner
 7. DeckLink と `casperctl` の統合文書
