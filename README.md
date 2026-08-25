@@ -32,6 +32,35 @@ nix flake check
 開発 shell には Nix formatter、静的解析ツール、および CMake/Ninja build に必要な基本ツールが含まれます。
 `nix flake check` は minimal/full package build、Media Scanner build、module evaluation、headless VM 上の AMCP/HTML/Media Scanner smoke test を実行します。
 
+## CI
+
+GitHub Actions は pull request、`main` への push、手動実行で動きます。`ubuntu-24.04` の `x86_64-linux` runner 上で、まず formatter、flake の評価、workflow lint を実行し、成功した場合だけ KVM を使う全 package/module/VM check に進みます。同じ pull request の古い実行はキャンセルしますが、`main` push の実行はキャンセルしません。CI での check は次のコマンドに対応します。
+
+```console
+nix fmt -- --ci
+nix flake show --all-systems --no-update-lock-file
+nix flake check --no-build --all-systems --no-update-lock-file
+nix build .#checks.x86_64-linux.workflow-lint --print-build-logs
+nix flake check --all-systems --no-update-lock-file --print-build-logs
+```
+
+### Cachix 公開キャッシュ
+
+公開 Cachix cache を CI で使うには、まず Cachix で cache を作成し、GitHub repository の Settings → Secrets and variables → Actions に次を登録します。
+
+- Repository variable `CACHIX_CACHE_NAME`: 作成した公開 cache 名
+- Repository secret `CACHIX_AUTH_TOKEN`: 成果物の push を許可した Cachix auth token
+
+両方が設定された `main` push だけが daemon mode で成果物を cache へ push します。push に失敗した場合は CI も失敗します。pull request（fork からの pull request を含む）と手動実行は、secret が利用可能でも常に read-only です。cache 名だけ設定した場合、または token が無い場合も公開 cache の pull のみを試みます。cache が未設定なら Cachix の step を省略して通常の Nix build に fallback します。公開 cache の pull 障害は build を妨げません。
+
+利用者側で公開 cache を有効にする場合は Cachix CLI をインストールし、次を実行します。
+
+```console
+cachix use <cache-name>
+```
+
+`<cache-name>` は `CACHIX_CACHE_NAME` と同じ値です。
+
 ## Full package
 
 CEF 142 と HTML Producer を含む CasparCG Server 2.5.0 をビルドします。これは flake と NixOS module の既定 package です。
@@ -174,3 +203,4 @@ DeckLink hardware を使う放送品質試験は自動 VM check の対象外で�
 5. CEF 142 対応 package（完了）
 6. Media Scanner（完了）
 7. DeckLink と `casperctl` の統合文書（完了）
+8. GitHub Actions CI と Cachix 公開キャッシュ（完了）

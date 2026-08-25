@@ -96,6 +96,16 @@
               ${./checks/media-scanner.nix}
             touch "$out"
           '';
+
+          workflow-lint =
+            pkgs.runCommand "casparcg-nix-workflow-lint"
+              {
+                nativeBuildInputs = [ pkgs.actionlint ];
+              }
+              ''
+                actionlint ${./.github/workflows/ci.yml}
+                touch "$out"
+              '';
         }
       );
 
@@ -107,6 +117,7 @@
         {
           default = pkgs.mkShellNoCC {
             packages = with pkgs; [
+              actionlint
               cmake
               deadnix
               git

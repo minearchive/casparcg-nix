@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+        with:
+          enable_kvm: true
+
+      - name: Configure Cachix pull cache
+        if: ${{ vars.CACHIX_CACHE_NAME != '' }}
+        continue-on-error: true
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71
+        with:
+          name: ${{ vars.CACHIX_CACHE_NAME }}
+          skipPush: true
+
+      - name: Check formatting
+        run: nix fmt -- --ci
+
+      - name: Show flake outputs
+        run: nix flake show --all-systems --no-update-lock-file
+
+      - name: Evaluate flake checks
+        run: nix flake check --no-build --all-systems --no-update-lock-file
+
+      - name: Lint GitHub Actions workflow
+        run: nix build .#checks.x86_64-linux.workflow-lint --print-build-logs
+
+  flake-check:
+    needs: static
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+        with:
+          enable_kvm: true
+
+      - name: Configure Cachix pull cache
+        if: ${{ vars.CACHIX_CACHE_NAME != '' }}
+        continue-on-error: true
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71
+        with:
+          name: ${{ vars.CACHIX_CACHE_NAME }}
+          skipPush: true
+
+      - name: Configure Cachix publish cache
+        if: ${{ vars.CACHIX_CACHE_NAME != '' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71
+        with:
+          name: ${{ vars.CACHIX_CACHE_NAME }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          skipAddingSubstituter: true
+          skipPush: ${{ secrets.CACHIX_AUTH_TOKEN == '' }}
+          useDaemon: true
+
+      - name: Run all flake checks
+        run: nix flake check --all-systems --no-update-lock-file --print-build-logs
