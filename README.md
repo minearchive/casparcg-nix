@@ -188,12 +188,6 @@ Blackmagic Desktop Video は unfree です。この module が `allowUnfree` を
 
 DeckLink hardware を使う放送品質試験は自動 VM check の対象外です。driver または card の初期化に失敗した場合も、両方の DeckLink option を無効にすれば unfree package を要求せず core service を利用できます。
 
-## casperctl integration
-
-同一ホストでは両 flake を同じ `nixpkgs` input に追従させ、`casperctl` から `127.0.0.1:5250` へ接続します。構成例は [`examples/casperctl.nix`](examples/casperctl.nix) にあります。CasparCG の AMCP listener は loopback 限定とは仮定せず、`services.casparcg.openFirewall = false` のままにしてください。
-
-別ホストに置く場合は AMCP を全 interface へ一括公開せず、WireGuard 等の VPN interface または送信元を限定した firewall rule をホスト構成で追加します。CasparCG の一時停止を `casperctl` の fatal condition や systemd の停止連鎖にせず、controller 側の readiness と再接続で扱います。
-
 ## Roadmap
 
 1. flake skeleton（完了）
@@ -202,5 +196,5 @@ DeckLink hardware を使う放送品質試験は自動 VM check の対象外で�
 4. module/AMCP checks（完了）
 5. CEF 142 対応 package（完了）
 6. Media Scanner（完了）
-7. DeckLink と `casperctl` の統合文書（完了）
+7. DeckLink 統合文書（完了）
 8. GitHub Actions CI と Cachix 公開キャッシュ（完了）
